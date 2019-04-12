@@ -71,7 +71,6 @@ urlinfo_t *parse_url(char *url)
     *colon_pointer = '\0';
   }
   else {
-    (void)*colon_pointer;
     port = "80";
   }
 
