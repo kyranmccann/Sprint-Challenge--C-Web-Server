@@ -71,6 +71,7 @@ urlinfo_t *parse_url(char *url)
     *colon_pointer = '\0';
   }
   else {
+    (void)*colon_pointer;
     port = "80";
   }
 
@@ -102,14 +103,21 @@ int send_request(int fd, char *hostname, char *port, char *path)
   // IMPLEMENT ME! //
   ///////////////////
 
-  sprintf(request,
+  int request_length = sprintf(request,
     "GET /%s HTTP/1.1\n"
     "Host: %s:%s\n"
     "Connection: close\n"
     "\n",
     path, hostname, port);
 
-  return send(fd, request, strlen(request), 0);
+  rv = send(fd, request, request_length, 0);
+
+  if (rv < 0)
+  {
+    perror("send");
+  }
+
+  return rv;
 }
 
 int main(int argc, char *argv[])
@@ -139,14 +147,29 @@ int main(int argc, char *argv[])
 
   send_request(sockfd, urlinfo -> hostname, urlinfo -> port, urlinfo -> path);
 
+  char request_type[11];
+  char status[4];
+  char *location;
+  char location2[9];
+  char redirect[40];
+
+  sscanf(buf, "%s %s", request_type, status);
+
+  if (strcmp(status, "301") == 0)
+  {
+    location = strstr(buf, "Location");
+    sscanf(location, "%s %s", location2, redirect);
+    urlinfo = parse_url(redirect);
+    sockfd = get_socket(urlinfo -> hostname, urlinfo -> port);
+    send_request(sockfd, urlinfo -> hostname, urlinfo -> port, urlinfo -> path);
+  }
+
   while ((numbytes = recv(sockfd, buf, BUFSIZE - 1, 0)) > 0)
   {
     fprintf(stdout, "%s\n", buf);
   }
 
   free(urlinfo -> hostname);
-  free(urlinfo -> port);
-  free(urlinfo -> path);
   free(urlinfo);
 
   close(sockfd);
