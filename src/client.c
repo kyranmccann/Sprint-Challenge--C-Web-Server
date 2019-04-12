@@ -126,6 +126,9 @@ int main(int argc, char *argv[])
     fprintf(stdout, "%s\n", buf);
   }
 
+  free(urlinfo -> hostname);
+  free(urlinfo -> port);
+  free(urlinfo -> path);
   free(urlinfo);
 
   close(sockfd);
