@@ -49,6 +49,36 @@ urlinfo_t *parse_url(char *url)
   // IMPLEMENT ME! //
   ///////////////////
 
+  char http[4];
+  char *backslash_pointer;
+  char *colon_pointer;
+
+  strncpy(http, hostname, 4);
+
+  if (strcmp(http, "http") == 0)
+  {
+    backslash_pointer = strchr(hostname, '/') + 2;
+    hostname = strdup(backslash_pointer);
+  }
+
+  backslash_pointer = strchr(hostname, '/');
+  path = backslash_pointer + 1;
+  *backslash_pointer = '\0';
+  colon_pointer = strchr(hostname, ':');
+  if (colon_pointer != NULL)
+  {
+    port = colon_pointer + 1;
+    *colon_pointer = '\0';
+  }
+  else {
+    port = "80";
+  }
+
+
+  urlinfo -> hostname = strdup(hostname);
+  urlinfo -> port = port;
+  urlinfo -> path = path;
+
   return urlinfo;
 }
 
@@ -72,12 +102,19 @@ int send_request(int fd, char *hostname, char *port, char *path)
   // IMPLEMENT ME! //
   ///////////////////
 
-  return 0;
+  int request_length = sprintf(request,
+    "GET /%s HTTP/1.1\n"
+    "Host: %s:%s\n"
+    "Connection: close\n"
+    "\n",
+    path, hostname, port);
+
+  return send(fd, request, request_length, 0);
 }
 
 int main(int argc, char *argv[])
-{  
-  int sockfd, numbytes;  
+{
+  int sockfd, numbytes;
   char buf[BUFSIZE];
 
   if (argc != 2) {
@@ -96,6 +133,38 @@ int main(int argc, char *argv[])
   ///////////////////
   // IMPLEMENT ME! //
   ///////////////////
+  urlinfo_t *urlinfo = parse_url(argv[1]);
+  printf("hostname: %s\n port: %s\n", urlinfo -> hostname, urlinfo -> port);
+  sockfd = get_socket(urlinfo -> hostname, urlinfo -> port);
+
+  send_request(sockfd, urlinfo -> hostname, urlinfo -> port, urlinfo -> path);
+
+  char request_type[11];
+  char status[4];
+  char *location;
+  char location2[9];
+  char redirect[40];
+
+  sscanf(buf, "%s %s", request_type, status);
+
+  if (strcmp(status, "301") == 0)
+  {
+    location = strstr(buf, "Location");
+    sscanf(location, "%s %s", location2, redirect);
+    urlinfo = parse_url(redirect);
+    sockfd = get_socket(urlinfo -> hostname, urlinfo -> port);
+    send_request(sockfd, urlinfo -> hostname, urlinfo -> port, urlinfo -> path);
+  }
+
+  while ((numbytes = recv(sockfd, buf, BUFSIZE - 1, 0)) > 0)
+  {
+    fprintf(stdout, "%s\n", buf);
+  }
+
+  free(urlinfo -> hostname);
+  free(urlinfo);
+
+  close(sockfd);
 
   return 0;
 }
