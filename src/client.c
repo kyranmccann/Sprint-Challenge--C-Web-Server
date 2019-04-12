@@ -49,17 +49,35 @@ urlinfo_t *parse_url(char *url)
   // IMPLEMENT ME! //
   ///////////////////
 
-  path = strchr(hostname, '/');
-  urlinfo -> path = path + 1;
-  path[0] = '\0';
+  char http[4];
+  char *backslash_pointer;
+  char *colon_pointer;
 
-  port = strchr(hostname, ':');
-  urlinfo -> port = strdup(port + 1);
-  port[0] = '\0';
+  strncpy(http, hostname, 4);
+
+  if (strcmp(http, "http") == 0)
+  {
+    backslash_pointer = strchr(hostname, '/') + 2;
+    hostname = strdup(backslash_pointer);
+  }
+
+  backslash_pointer = strchr(hostname, '/');
+  path = backslash_pointer + 1;
+  *backslash_pointer = '\0';
+  colon_pointer = strchr(hostname, ':');
+  if (colon_pointer != NULL)
+  {
+    port = colon_pointer + 1;
+    *colon_pointer = '\0';
+  }
+  else {
+    port = "80";
+  }
+
 
   urlinfo -> hostname = strdup(hostname);
-
-  free(hostname);
+  urlinfo -> port = port;
+  urlinfo -> path = path;
 
   return urlinfo;
 }
